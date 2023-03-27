@@ -1522,14 +1522,17 @@ RESULT is the new result, as an org element, to be inserted.")
 (cl-defmethod jupyter-org--insert-result (req context result)
   (when (eq (org-element-type result) 'pandoc)
     (setq result (jupyter-org-pandoc-placeholder-element req result)))
-
-  (insert (org-element-interpret-data
-           (jupyter-org--wrap-result-maybe
-            context (if (jupyter-org--stream-result-p result)
-                        (thread-last result
-                          jupyter-org-strip-last-newline
-                          jupyter-org-scalar)
-                      result))))
+  (let ((str
+         (org-element-interpret-data
+          (jupyter-org--wrap-result-maybe
+           context (if (jupyter-org--stream-result-p result)
+                       (thread-last result
+                         jupyter-org-strip-last-newline
+                         jupyter-org-scalar)
+                     result)))))
+    (if (< (length str) 12000)
+        (insert str)
+      (insert (format ": Result was too long! Length was %d" (length str)))))
   (when (/= (point) (line-beginning-position))
     ;; Org objects such as file links do not have a newline added when
     ;; converting to their string representation by
